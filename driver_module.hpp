@@ -30,11 +30,11 @@
 //#include <<<TC_INSERTS_IO_FILE_NAME_HERE>>>
 
 // Include the STDINT fixed width types.
-#include <<<TC_INSERTS_STDINT_FILE_NAME_HERE>>>
+#include <stdint.h>
 
 // Include the all important MAVlink library.
 #ifndef NO_MAVLINK_ENABLED
-#include "stm_bare_common/mavlink.hpp"
+#include "mavlink.hpp"
 #endif
 
 #ifdef LIBCANARD_ENABLED
