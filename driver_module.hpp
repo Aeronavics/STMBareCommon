@@ -31,6 +31,7 @@
 
 // Include the STDINT fixed width types.
 #include <stdint.h>
+#include "config.h"
 
 // Include the all important MAVlink library.
 #ifndef NO_MAVLINK_ENABLED
