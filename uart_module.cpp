@@ -419,13 +419,30 @@ void Uart_module::reset_uart(void)
          * Clear the error.
          * apparently this is done by reading the status register and the data register.
          * */
-        uint32_t clear_status = READ_REG(UART_MODULE->Instance->SR);
-        uint32_t clear_data = READ_REG(UART_MODULE->Instance->DR);
-        if(clear_status == 0 && clear_data == 0)
-        {
-                //something here to stop the compiler optimising this out. We actually do not care if this is reached at all, it is simply so the SR and DR can be read.
-                asm("nop");
-        }
+#ifdef STM32G4XX
+#define STM_RESET_UART
+					uint32_t clear_status = READ_REG(UART_MODULE->Instance->ISR);
+					uint32_t clear_recieve_data = READ_REG(UART_MODULE->Instance->RDR);
+					uint32_t clear_transmit_data = READ_REG(UART_MODULE->Instance->TDR);
+					if(clear_status == 0 && clear_recieve_data == 0 && clear_transmit_data == 0)
+					{
+									//something here to stop the compiler optimising this out. We actually do not care if this is reached at all, it is simply so the SR and DR can be read.
+									asm("nop");
+					}
+#endif
+#ifdef STM32F1XX
+#define STM_RESET_UART
+					uint32_t clear_status = READ_REG(UART_MODULE->Instance->SR);
+					uint32_t clear_data = READ_REG(UART_MODULE->Instance->DR);
+					if(clear_status == 0 && clear_data == 0)
+					{
+									//something here to stop the compiler optimising this out. We actually do not care if this is reached at all, it is simply so the SR and DR can be read.
+									asm("nop");
+					}
+#endif
+#ifndef STM_RESET_UART
+#error No reset_uart  for this chip defined
+#endif
 
         stop_tx_rx();
         start_tx_rx();

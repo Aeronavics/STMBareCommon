@@ -308,7 +308,17 @@ void Libcanard_module::sync_update_1Hz()
                     }
                     #endif
                     //start the STM32 CAN drivers
+#ifdef STM32F1XX
+#define STM_CAN_DEFINED
                     MX_CAN_Init();
+#endif
+#ifdef STM32G4XX
+#define STM_CAN_DEFINED
+                    MX_FDCAN1_Init();
+#endif
+#ifndef STM_CAN_DEFINED
+#error No Can Initialisation function defined
+#endif
 
                     //todo:fix bit rate allocation
                     this->can_bus_bit_rate_ = 1000000; //can_bus_bit_rate;

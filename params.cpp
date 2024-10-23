@@ -25,7 +25,6 @@
 // INCLUDE THE MATCHING HEADER FILE.
 
 #include "params.hpp"
-#define FIRMWARE_VERSION 1
 
 // INCLUDE REQUIRED HEADER FILES FOR IMPLEMENTATION.
 
@@ -778,7 +777,7 @@ void Mavlink_params::do_flash_store(uint8_t param_version)
     /**
      * Erase the memory
      */
-    erase_eeprom_page(FLASH_PAGE_1);
+    erase_eeprom_page(1);
     /**
      * Write the status
      */
@@ -809,7 +808,7 @@ void Mavlink_params::do_flash_store(uint8_t param_version)
  * Erases a specified page
  * @param address
  */
-void Mavlink_params::erase_eeprom_page(uint32_t address)
+void Mavlink_params::erase_eeprom_page(uint32_t page)
 {
     /**
      * Unlock flashing ability
@@ -818,7 +817,7 @@ void Mavlink_params::erase_eeprom_page(uint32_t address)
     uint32_t PageError = 0;
     FLASH_EraseInitTypeDef pErase;
     pErase.NbPages = 1; //single page
-    pErase.PageAddress = address;
+    pErase.Page = page;
     pErase.Banks = FLASH_BANK_1;
     pErase.TypeErase = FLASH_TYPEERASE_PAGES;
     /**
@@ -846,7 +845,17 @@ void Mavlink_params::store_in_flash(uint32_t address, uint32_t data)
     /**
      * Write the 32Bit data word
      */
-    HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, address, data);
+#ifdef STM32F1XX
+#define STM_FOUND_FLASH
+    	HAL_FLASH_Program(FLSH_TYPEPROGRAM_WORD, address, data);
+#endif
+#ifdef STM32G4XX
+#define STM_FOUND_FLASH
+    	HAL_FLASH_Program(FLASH_TYPEPROGRAM_FAST, address, data);
+#endif
+#ifndef STM_FOUND_FLASH
+#error No HAL_FLASH_Program defined for this chip
+#endif
 
     /**
      * End by locking the flash partition

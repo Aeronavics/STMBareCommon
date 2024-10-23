@@ -50,6 +50,7 @@
 #include "config.h"
 #include STM_HAL
 #include STM_CAN
+#include MAIN_HEADER
 
 #include "tim.h"
 
@@ -100,8 +101,6 @@
   #include <uavcan.equipment.safety.ArmingStatus.h>
 #endif
 
-
-#define FIRMWARE_VERSION <<<TC_INSERTS_COMMIT_HASH_HERE>>>
 
 #define APP_VERSION_MAJOR                                           1
 #define APP_VERSION_MINOR                                           0
