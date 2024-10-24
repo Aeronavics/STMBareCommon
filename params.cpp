@@ -379,7 +379,7 @@ T Param_value::as() const
         {
             // Do nothing.
             HAL_Delay(50);
-            HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_12);
+            HAL_GPIO_TogglePin(ERROR1_GPIO_Port, ERROR1_Pin);
         }
     }
 
@@ -761,7 +761,7 @@ void Mavlink_params::request_data_restore(void)
 
 void Mavlink_params::do_flash_store(uint8_t param_version)
 {
-    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_12, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(ERROR1_GPIO_Port, ERROR1_Pin, GPIO_PIN_SET);
     const volatile uint32_t *param_values = (const volatile uint32_t *)(FLASH_PAGE_1);
     EEPROM_Status_t status_block;
     status_block.uint32_block = *param_values;
@@ -812,7 +812,7 @@ void Mavlink_params::do_flash_store(uint8_t param_version)
         address += sizeof (uint32_t);
     }
 
-    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_12, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(ERROR1_GPIO_Port, ERROR1_Pin, GPIO_PIN_RESET);
 }
 
 
