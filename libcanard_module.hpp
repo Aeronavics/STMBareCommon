@@ -50,7 +50,7 @@
 #include "config.h"
 #include STM_HAL
 #include STM_CAN
-#include MAIN_HEADER
+//#include MAIN_HEADER
 
 #include "tim.h"
 
