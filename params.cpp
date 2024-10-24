@@ -774,10 +774,21 @@ void Mavlink_params::do_flash_store(uint8_t param_version)
     //increment the counter
     status_block.uint16_block[1]++;
 
+
     /**
      * Erase the memory
      */
-    erase_eeprom_page(1);
+#ifdef STM32F1XX
+#define ERASE_EEPROM_PAGE_DEFINED
+      erase_eeprom_page_by_address(FLASH_PAGE_1);
+#endif
+#ifdef STM32G4XX
+#define ERASE_EEPROM_PAGE_DEFINED
+      erase_eeprom_page_by_number(1);
+#endif
+#ifndef ERASE_EEPROM_PAGE_DEFINED
+#error No erase_eeprom_page defined for this chip
+#endif
     /**
      * Write the status
      */
@@ -804,11 +815,41 @@ void Mavlink_params::do_flash_store(uint8_t param_version)
     HAL_GPIO_WritePin(GPIOE, GPIO_PIN_12, GPIO_PIN_RESET);
 }
 
+
+#ifdef STM32F1XX
 /**
- * Erases a specified page
- * @param address
+ * Erases a specified page at given address
+ * @param page number to erase
  */
-void Mavlink_params::erase_eeprom_page(uint32_t page)
+void Mavlink_params::erase_eeprom_page_by_address(uint32_t address)
+{
+    /**
+     * Unlock flashing ability
+     */
+    HAL_FLASH_Unlock();
+    uint32_t PageError = 0;
+    FLASH_EraseInitTypeDef pErase;
+    pErase.NbPages = 1; //single page
+    pErase.PageAddress = address;
+    pErase.Banks = FLASH_BANK_1;
+    pErase.TypeErase = FLASH_TYPEERASE_PAGES;
+    /**
+     * Perform erase
+     */
+    HAL_FLASHEx_Erase(&pErase, &PageError);
+    /**
+     * Lock Flash ability
+     */
+    HAL_FLASH_Lock();
+}
+#endif
+
+#ifdef STM32G4XX
+/**
+ * Erases a specified page at given page number
+ * @param page number to erase
+ */
+void Mavlink_params::erase_eeprom_page_by_number(uint32_t page)
 {
     /**
      * Unlock flashing ability
@@ -829,6 +870,7 @@ void Mavlink_params::erase_eeprom_page(uint32_t page)
      */
     HAL_FLASH_Lock();
 }
+#endif
 
 /**
  * Stores 4 bytes (1 mavlink parameter' raw value) of data in flash memory as specified

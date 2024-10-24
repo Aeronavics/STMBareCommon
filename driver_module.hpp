@@ -31,6 +31,7 @@
 
 // Include the STDINT fixed width types.
 #include <stdint.h>
+#include "config.h"
 
 // Include the all important MAVlink library.
 #ifndef NO_MAVLINK_ENABLED
@@ -86,7 +87,7 @@ public:
      * @param	Nothing.
      * @return	Nothing.
      */
-    virtual void sync_update_unthrottled();
+    virtual void sync_update_unthrottled(void)=0;
 
     /**
      * Perform synchronous housekeeping for the driver; this method gets called at 100Hz.
@@ -94,7 +95,7 @@ public:
      * @param	Nothing.
      * @return	Nothing.
      */
-    virtual void sync_update_100Hz();
+    virtual void sync_update_100Hz(void)=0;
 
     /**
      * Perform synchronous housekeeping for the driver; this method gets called at 100Hz.
@@ -115,7 +116,7 @@ public:
      * @param	Nothing.
      * @return	Nothing.
      */
-    virtual void sync_update_10Hz();
+    virtual void sync_update_10Hz(void)=0;
 
     /**
      * Perform synchronous housekeeping for the driver; this method gets called at 1Hz.
@@ -123,7 +124,7 @@ public:
      * @param	Nothing.
      * @return	Nothing.
      */
-    virtual void sync_update_1Hz();
+    virtual void sync_update_1Hz(void)=0;
 
     /**
      * Handle a MAVlink message which has been received.
@@ -172,7 +173,7 @@ public:
      *
      * @return	The current state of the driver.
      */
-    Driver_state get_state() const {
+    Driver_state get_state(void) const {
         return this_state;
     }
 

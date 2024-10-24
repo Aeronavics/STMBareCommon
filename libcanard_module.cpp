@@ -1691,7 +1691,17 @@ void Libcanard_module::handle_rx_can(const CanardRxTransfer * transfer, uint64_t
       /**
        * Erase the memory
        */
+#ifdef STM32F1XX
+#define ERASE_EEPROM_PAGE_DEFINED
       erase_eeprom_page(CAN_EEPROM_LOCATION);
+#endif
+#ifdef STM32G4XX
+#define ERASE_EEPROM_PAGE_DEFINED
+      erase_eeprom_page_by_number(CAN_EEPROM_PAGE_NUM);
+#endif
+#ifndef ERASE_EEPROM_PAGE_DEFINED
+#error No erase_eeprom_page defined for this chip
+#endif
       /**
        * Write the status
        */
@@ -1812,11 +1822,12 @@ void Libcanard_module::handle_rx_can(const CanardRxTransfer * transfer, uint64_t
         HAL_FLASH_Lock();
     }
 
+#ifdef STM32F1XX
     /**
-     * Erases a specified page. Pretty simple.
+     * Erases a specified page by address
      * @param address
      */
-    void Libcanard_module::erase_eeprom_page(uint32_t address)
+    void Libcanard_module::erase_eeprom_page_by_address(uint32_t address)
     {
         /**
          * Unlock flashing ability
@@ -1837,6 +1848,34 @@ void Libcanard_module::handle_rx_can(const CanardRxTransfer * transfer, uint64_t
          */
         HAL_FLASH_Lock();
     }
+#endif
+#ifdef STM32G4XX
+    /**
+     * Erases a specified page by page number
+     * @param page number
+     */
+    void Libcanard_module::erase_eeprom_page_by_number(uint32_t page_number)
+    {
+        /**
+         * Unlock flashing ability
+         */
+        HAL_FLASH_Unlock();
+        uint32_t PageError = 0;
+        FLASH_EraseInitTypeDef pErase;
+        pErase.NbPages = 1; //single page
+        pErase.Page = page_number;
+        pErase.Banks = FLASH_BANK_1;
+        pErase.TypeErase = FLASH_TYPEERASE_PAGES;
+        /**
+         * Perform erase
+         */
+        HAL_FLASHEx_Erase(&pErase, &PageError);
+        /**
+         * Lock Flash ability
+         */
+        HAL_FLASH_Lock();
+    }
+#endif
 
 
 

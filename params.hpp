@@ -376,7 +376,9 @@ private:
 
     void store_in_flash(uint32_t address, uint32_t data);
 
-    void erase_eeprom_page(uint32_t address);
+    void erase_eeprom_page_by_address(uint32_t address);
+
+    void erase_eeprom_page_by_number(uint32_t page);
 
     friend bool is_system_armed();
 };

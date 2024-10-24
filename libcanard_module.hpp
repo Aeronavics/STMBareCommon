@@ -155,6 +155,7 @@ extern uint8_t bootloader_info_location;
   Location of the CAN Parameters in flash memory.
 */
 #define CAN_EEPROM_LOCATION ((uint32_t)0x0800B000) //ADDR_FLASH_PAGE_22
+#define CAN_EEPROM_PAGE_NUM 22
 #define CAN_NODE_LOCATION_OFFSET 0x10 //This is so we do not have to perform auto can node allocation each time.
 #define FLASH_START_ADDRESS ((uint32_t)0x0800C800) //ADDR_FLASH_PAGE_25
 #define RAM_DO_BOOTLOADER_BYTE 0x22
@@ -491,13 +492,18 @@ private:
       @returns true if the operation has succeeded, false if not.
     */
     bool load_can_parameters();
-
     /**
-      Erases a specified page in memory.
+      Erases a specified page in memory by address.
       @param address memory address that is to be erased.
       @returns Nothing
     */
-    void erase_eeprom_page(uint32_t address);
+    void erase_eeprom_page_by_address(uint32_t address);
+    /**
+			Erases a specified page in memory by page number.
+			@param page number of page that is to be erased.
+			@returns Nothing
+		*/
+		void erase_eeprom_page_by_number(uint32_t page_number);
     /**
       Stores a double word at a specified place in memory.
 
