@@ -419,7 +419,7 @@ void Uart_module::reset_uart(void)
          * Clear the error.
          * apparently this is done by reading the status register and the data register.
          * */
-#ifdef STM32G4XX
+#if defined(STM32G4XX) || defined(STM32L4XX)
 #define STM_RESET_UART
 					uint32_t clear_status = READ_REG(UART_MODULE->Instance->ISR);
 					uint32_t clear_recieve_data = READ_REG(UART_MODULE->Instance->RDR);

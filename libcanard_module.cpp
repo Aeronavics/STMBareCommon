@@ -316,6 +316,10 @@ void Libcanard_module::sync_update_1Hz()
 #define STM_CAN_DEFINED
                     MX_FDCAN1_Init();
 #endif
+#ifdef STM32L4XX
+#define STM_CAN_DEFINED
+                    MX_CAN1_Init();
+#endif
 #ifndef STM_CAN_DEFINED
 #error No Can Initialisation function defined
 #endif
@@ -1695,7 +1699,7 @@ void Libcanard_module::handle_rx_can(const CanardRxTransfer * transfer, uint64_t
 #define ERASE_EEPROM_PAGE_DEFINED
       erase_eeprom_page(CAN_EEPROM_LOCATION);
 #endif
-#ifdef STM32G4XX
+#if defined(STM32G4XX) || defined(STM32L4XX)
 #define ERASE_EEPROM_PAGE_DEFINED
       erase_eeprom_page_by_number(CAN_EEPROM_PAGE_NUM);
 #endif
@@ -1849,7 +1853,7 @@ void Libcanard_module::handle_rx_can(const CanardRxTransfer * transfer, uint64_t
         HAL_FLASH_Lock();
     }
 #endif
-#ifdef STM32G4XX
+#if defined(STM32G4XX) || defined(STM32L4XX)
     /**
      * Erases a specified page by page number
      * @param page number

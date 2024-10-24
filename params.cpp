@@ -782,7 +782,7 @@ void Mavlink_params::do_flash_store(uint8_t param_version)
 #define ERASE_EEPROM_PAGE_DEFINED
       erase_eeprom_page_by_address(FLASH_PAGE_1);
 #endif
-#ifdef STM32G4XX
+#if defined(STM32G4XX) || defined(STM32L4XX)
 #define ERASE_EEPROM_PAGE_DEFINED
       erase_eeprom_page_by_number(1);
 #endif
@@ -844,7 +844,7 @@ void Mavlink_params::erase_eeprom_page_by_address(uint32_t address)
 }
 #endif
 
-#ifdef STM32G4XX
+#if defined(STM32G4XX) || defined(STM32L4XX)
 /**
  * Erases a specified page at given page number
  * @param page number to erase
@@ -891,7 +891,7 @@ void Mavlink_params::store_in_flash(uint32_t address, uint32_t data)
 #define STM_FOUND_FLASH
     	HAL_FLASH_Program(FLSH_TYPEPROGRAM_WORD, address, data);
 #endif
-#ifdef STM32G4XX
+#if defined(STM32G4XX) || defined(STM32L4XX)
 #define STM_FOUND_FLASH
     	HAL_FLASH_Program(FLASH_TYPEPROGRAM_FAST, address, data);
 #endif
