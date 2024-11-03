@@ -109,7 +109,6 @@ void Libcanard_module::sync_update_unthrottled()
 {
     if (this_state != DRIVER_STATE_NORMAL)
         return;
-
     poll();
     return;
 }
@@ -1579,7 +1578,7 @@ int usleep(uint32_t useconds)
 UniqueID Libcanard_module::readUniqueID()
 {
     UniqueID out_bytes;
-    memcpy(out_bytes.data(), reinterpret_cast<const void*> (0x1FFFF7E8), std::tuple_size<UniqueID>::value);
+    memcpy(out_bytes.data(), reinterpret_cast<const void*> (UID_BASE), (size_t)12);
     return out_bytes;
 }
 
