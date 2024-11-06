@@ -40,9 +40,6 @@
 #include <cstddef>
 #include <unistd.h>
 #include <limits>
-//Include libcanard
-#include <canard.h>
-#include <canard_stm32.h>
 //#define NO_MAVLINK_ENABLED 1
 #include "driver_module.hpp"
 //include our chip definition
@@ -51,6 +48,16 @@
 #include STM_HAL
 #include STM_CAN
 //#include MAIN_HEADER
+
+//Include libcanard
+#include <canard.h>
+#if defined(STM32F1XX) || defined(STM32L4XX)
+#include <canard_stm32.h>
+#elif defined(STM32G4XX)
+#define FDCAN1
+#include <stm32g4xx_hal_fdcan.h>
+#include <queue>
+#endif
 
 #include "tim.h"
 
@@ -341,6 +348,10 @@ public:
       void request_erase_parameters(void);
     #endif
 
+    #ifdef STM32G4XX
+      void add_to_rx_queue(CanardCANFrame can_frame);
+    #endif
+
     void sendLog(const impl_::LogLevel level, const std::string& txt);
 
     ~Libcanard_module(void);
@@ -409,6 +420,10 @@ private:
       bool can_enabled = false;
     #else
       bool can_enabled = true;
+    #endif
+
+    #ifdef STM32G4XX
+      std::queue<CanardCANFrame> rx_queue;
     #endif
 
     //increments if a message is received.

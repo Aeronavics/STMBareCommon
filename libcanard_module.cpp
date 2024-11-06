@@ -293,6 +293,7 @@ void Libcanard_module::sync_update_1Hz()
             {
                 return;
             }
+            #if defined(STM32F1XX) || defined(STM32L4XX)
             if (init_state == INIT_STATE_UNINITIALIZED)
             {
                     can_tx_count = 0;
@@ -366,6 +367,50 @@ void Libcanard_module::sync_update_1Hz()
                     can_module_state = State::Initialization;
                     #endif
             }
+            #elif defined(STM32G4XX)
+                can_tx_count = 0;
+                //can_rx_count = 0;
+                //load parameters if we want them
+                #ifdef LIBCANARD_MESSAGE_PARAMETERS
+                    //if we have failed to load the parameters, let us store the default ones.
+                    if(!load_can_parameters())
+                    {
+                        //This will store the relavent flags so we load correctly the next time.
+                        save_can_parameters(false);
+                    }
+                #endif
+                //start the STM32 CAN drivers
+
+                MX_FDCAN1_Init();
+
+                /* Start the FDCAN module */
+                if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK)
+                {
+                    Error_Handler();
+                }
+
+                if (HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK)
+                {
+                    Error_Handler();
+                }
+
+
+
+                // let us finish setting everything up.
+                // let us no longer stay in the init phase
+                next_state = DRIVER_STATE_NORMAL;
+
+                #ifdef LIBCANARD_MESSAGE_FIRMWARE_UPGRADE
+                    if (is_boot_image_available())
+                    {
+                        //check if we have a boot image for our starting state.
+                        can_module_state = State::BootDelay;
+                    }
+                #else
+                    can_module_state = State::Initialization;
+                #endif
+
+            #endif
 
         }
         case DRIVER_STATE_NORMAL:
@@ -600,6 +645,8 @@ uint64_t Libcanard_module::get_system_time_ms(void)
 {
     return driverhost_get_monotonic_time_us() / 1000;
 }
+
+#if defined(STM32F1XX) || defined(STM32L4XX)
 
 int Libcanard_module::init(const std::uint32_t bitrate, const Mode mode, const AcceptanceFilterConfig& acceptance_filter)
 {
@@ -1333,6 +1380,8 @@ int Libcanard_module::initCAN(const std::uint32_t bitrate, const Mode mode, cons
     return res;
 }
 
+#endif
+
 std::uint64_t Libcanard_module::getRandomDurationMicrosecond(std::uint64_t lower_bound_usec,
         std::uint64_t upper_bound_usec) const
 {
@@ -1502,6 +1551,7 @@ void Libcanard_module::poll()
     // Receive
     for (int i = 0; i < MaxFramesPerSpin; i++)
     {
+        #if defined(STM32F1XX) || defined(STM32L4XX)
         const auto res = receive(1); // Blocking call
         if (res.first < 1)
         {
@@ -1509,6 +1559,16 @@ void Libcanard_module::poll()
         }
 
         canardHandleRxFrame(&canard_, &res.second, getMonotonicTimestampUSec());
+        #elif defined(STM32G4XX)
+        if (rx_queue.empty())
+        {
+            break; // No frames
+        }
+        CanardCANFrame frame = rx_queue.front();
+        rx_queue.pop();
+        canardHandleRxFrame(&canard_, &frame, getMonotonicTimestampUSec());
+        #endif
+        
     }
 
     // Transmit
@@ -1520,11 +1580,30 @@ void Libcanard_module::poll()
             break; // Nothing to transmit
         }
 
+        #if defined(STM32F1XX) || defined(STM32L4XX)
         const int res = send(*txf, 0); // Non-blocking call
         if (res == 0)
         {
             break; // Queue is full
         }
+        #elif defined(STM32G4XX)
+        FDCAN_TxHeaderTypeDef TxHeader;
+        TxHeader.Identifier = txf->id;
+        TxHeader.IdType = FDCAN_STANDARD_ID;
+        TxHeader.TxFrameType = FDCAN_DATA_FRAME;
+        TxHeader.DataLength = txf->data_len;
+        TxHeader.ErrorStateIndicator = FDCAN_ESI_PASSIVE;
+        TxHeader.BitRateSwitch = FDCAN_BRS_OFF;
+        TxHeader.FDFormat = FDCAN_CLASSIC_CAN;
+        TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+        TxHeader.MessageMarker = 0;
+
+        if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, txf->data) != HAL_OK)
+        {
+            /* Transmission request Error */
+            Error_Handler();
+        }
+        #endif
 
         canardPopTxQueue(&canard_); // Transmitted successfully or error, either way remove the frame
     }
@@ -1907,3 +1986,34 @@ void Libcanard_module::handle_rx_can(const CanardRxTransfer * transfer, uint64_t
       }
   }
 #endif
+
+
+#if defined(STM32G4XX)
+void Libcanard_module::add_to_rx_queue(CanardCANFrame can_frame)
+{
+    rx_queue.push(can_frame);
+}
+
+
+
+void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
+{
+    if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
+    {
+        /* Retrieve Rx messages from RX FIFO0 */
+        FDCAN_RxHeaderTypeDef RxHeader;
+        CanardCANFrame can_frame;
+        if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, can_frame.data) != HAL_OK)
+        {
+            Error_Handler();
+        }
+
+        can_frame.id = RxHeader.Identifier;
+        can_frame.data_len = RxHeader.DataLength;
+        can_frame.iface_id = 0;
+
+        Libcanard_module::get_driver().add_to_rx_queue(can_frame);
+    }
+}
+#endif
+
