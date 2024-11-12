@@ -54,7 +54,6 @@
 #if defined(STM32F1XX) || defined(STM32L4XX)
 #include <canard_stm32.h>
 #elif defined(STM32G4XX)
-#define FDCAN1
 #include <stm32g4xx_hal_fdcan.h>
 #include <queue>
 #endif
@@ -107,7 +106,18 @@
 #ifdef LIBCANARD_MESSAGE_ARMINGSTATUS
   #include <uavcan.equipment.safety.ArmingStatus.h>
 #endif
-
+#ifdef LIBCANARD_MESSAGE_LOADCELLINFO
+  #include <com.aeronavics.LoadcellInfo.h>
+#endif
+#ifdef LIBCANARD_MESSAGE_SPRAYCTRL
+  #include <com.aeronavics.SprayCtrl.h>
+#endif
+#ifdef LIBCANARD_MESSAGE_EXTENDERINFO
+  #include <com.aeronavics.ExtenderInfo.h>
+#endif
+#ifdef LIBCANARD_MESSAGE_EXTENDERCTRL
+  #include <com.aeronavics.ExtenderCtrl.h>
+#endif
 
 #define APP_VERSION_MAJOR                                           1
 #define APP_VERSION_MINOR                                           0
@@ -129,8 +139,9 @@ extern uint8_t bootloader_info_location;
  /**
  Todo: Fix this and get it from the dsdl
  */
-#define UAVCAN_NODE_ID_ALLOCATION_DATA_TYPE_ID                      1
-#define UAVCAN_NODE_ID_ALLOCATION_DATA_TYPE_SIGNATURE               0x0b2a812620a11d40
+
+#include <uavcan.protocol.dynamic_node_id.Allocation.h>
+
 #define UAVCAN_NODE_ID_ALLOCATION_RANDOM_TIMEOUT_RANGE_USEC         400UL
 #define UAVCAN_NODE_ID_ALLOCATION_REQUEST_DELAY_OFFSET_USEC         600UL
 
@@ -161,10 +172,10 @@ extern uint8_t bootloader_info_location;
 /*
   Location of the CAN Parameters in flash memory.
 */
-#define CAN_EEPROM_LOCATION ((uint32_t)0x0800B000) //ADDR_FLASH_PAGE_22
-#define CAN_EEPROM_PAGE_NUM 22
+#define CAN_EEPROM_LOCATION ((uint32_t)0x08032000) //ADDR_FLASH_PAGE_100
+#define CAN_EEPROM_PAGE_NUM 100
 #define CAN_NODE_LOCATION_OFFSET 0x10 //This is so we do not have to perform auto can node allocation each time.
-#define FLASH_START_ADDRESS ((uint32_t)0x0800C800) //ADDR_FLASH_PAGE_25
+#define FLASH_START_ADDRESS ((uint32_t)0x08000000) //ADDR_FLASH_PAGE_25
 #define RAM_DO_BOOTLOADER_BYTE 0x22
 #define CAN_EEPROM_FLAG 0xBB
 
@@ -424,6 +435,7 @@ private:
 
     #ifdef STM32G4XX
       std::queue<CanardCANFrame> rx_queue;
+      FDCAN_FilterTypeDef sFilterConfig;
     #endif
 
     //increments if a message is received.
