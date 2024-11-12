@@ -382,7 +382,9 @@ void Libcanard_module::sync_update_1Hz()
                 //start the STM32 CAN drivers
 
                 MX_FDCAN1_Init();
+#ifdef CANARD_MULTI_IFACE
                 MX_FDCAN2_Init();
+#endif
 
                 /* Configure Rx filter */
                 sFilterConfig.IdType = FDCAN_EXTENDED_ID;
@@ -408,10 +410,6 @@ void Libcanard_module::sync_update_1Hz()
                 {
                     Error_Handler();
                 }
-                if (HAL_FDCAN_ConfigFilter(&hfdcan2, &sFilterConfig) != HAL_OK)
-				{
-					Error_Handler();
-				}
 
                 /* Start the FDCAN module */
                 if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK)
@@ -419,21 +417,28 @@ void Libcanard_module::sync_update_1Hz()
                     Error_Handler();
                 }
 
-                /* Start the FDCAN module */
-				if (HAL_FDCAN_Start(&hfdcan2) != HAL_OK)
-				{
-					Error_Handler();
-				}
-
                 if (HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK)
                 {
                     Error_Handler();
                 }
-                if (HAL_FDCAN_ActivateNotification(&hfdcan2, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK)
-				{
-					Error_Handler();
-				}
 
+#ifdef CANARD_MULTI_IFACE
+                if (HAL_FDCAN_ConfigFilter(&hfdcan2, &sFilterConfig) != HAL_OK)
+								{
+										Error_Handler();
+								}
+
+                /* Start the FDCAN module */
+								if (HAL_FDCAN_Start(&hfdcan2) != HAL_OK)
+								{
+									Error_Handler();
+								}
+
+                if (HAL_FDCAN_ActivateNotification(&hfdcan2, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK)
+								{
+									Error_Handler();
+								}
+#endif
 
 
                 // let us finish setting everything up.
@@ -1427,8 +1432,7 @@ int Libcanard_module::initCAN(const std::uint32_t bitrate, const Mode mode, cons
 
 #endif
 
-std::uint64_t Libcanard_module::getRandomDurationMicrosecond(std::uint64_t lower_bound_usec,
-        std::uint64_t upper_bound_usec) const
+std::uint64_t Libcanard_module::getRandomDurationMicrosecond(std::uint64_t lower_bound_usec, std::uint64_t upper_bound_usec) const
 {
     const std::uint64_t rnd = std::uint64_t(rand()) * 128UL;
     return lower_bound_usec + rnd % (upper_bound_usec - lower_bound_usec);
@@ -1583,8 +1587,8 @@ void Libcanard_module::performDynamicNodeIDAllocation()
                 CANARD_TRANSFER_PRIORITY_LOW,
                 &allocation_request[0],
                 std::uint16_t(uid_size + 1U)
-#if CANARD_MULTI_IFACE
-        , 0
+#ifdef CANARD_MULTI_IFACE
+        , 0xFF
 #endif
         );
         //increment the CAN tx counter
@@ -1650,16 +1654,26 @@ void Libcanard_module::poll()
         TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
         TxHeader.MessageMarker = 0;
 
-        if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, txf->data) != HAL_OK)
-        {
-            /* Transmission request Error */
-            Error_Handler();
-        }
-        if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &TxHeader, txf->data) != HAL_OK)
-		{
-			/* Transmission request Error */
-			Error_Handler();
-		}
+#ifdef CANARD_MULTI_IFACE
+				if ((txf->iface_mask >> 0) & 0x1 == 1)
+				{
+#endif
+					if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, txf->data) != HAL_OK)
+					{
+							/* Transmission request Error */
+							Error_Handler();
+					}
+#ifdef CANARD_MULTI_IFACE
+				}
+				if ((txf->iface_mask >> 1) & 0x1 == 1)
+				{
+					if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &TxHeader, txf->data) != HAL_OK)
+					{
+						/* Transmission request Error */
+						Error_Handler();
+					}
+				}
+#endif
         #endif
 
         canardPopTxQueue(&canard_); // Transmitted successfully or error, either way remove the frame
@@ -1697,8 +1711,8 @@ void Libcanard_module::sendNodeStatus()
             CANARD_TRANSFER_PRIORITY_LOW,
             buffer,
             dsdl::NodeStatus::MaxSizeBytes
-#if CANARD_MULTI_IFACE
-        , 0
+#ifdef CANARD_MULTI_IFACE
+        , 0xFF
 #endif
     );
     //increment the CAN counter
@@ -1739,8 +1753,8 @@ void Libcanard_module::sendLog(const impl_::LogLevel level, const std::string & 
             CANARD_TRANSFER_PRIORITY_LOWEST,
             buffer,
             1 + SourceName.length() + txt.length()
-#if CANARD_MULTI_IFACE
-        , 0
+#ifdef CANARD_MULTI_IFACE
+        , 0xFF
 #endif
     );
 
@@ -1762,8 +1776,8 @@ void Libcanard_module::handle_rx_can(const CanardRxTransfer * transfer, uint64_t
           priority,
           payload,
           payload_len
-#if CANARD_MULTI_IFACE
-        , 0
+#ifdef CANARD_MULTI_IFACE
+        , 0xFF
 #endif
     );
           //increment the CAN TX counter
@@ -2233,8 +2247,8 @@ void Libcanard_module::onTransferReception(CanardRxTransfer * const transfer)
                 CanardResponse,
                 &node_info_buffer,
                 len
-#if CANARD_MULTI_IFACE
-        , 0
+#ifdef CANARD_MULTI_IFACE
+        , 0xFF
 #endif
 		);
         can_tx_count++;
@@ -2269,8 +2283,8 @@ void Libcanard_module::onTransferReception(CanardRxTransfer * const transfer)
                 CanardResponse,
                 &response,
                 1
-#if CANARD_MULTI_IFACE
-        , 0
+#ifdef CANARD_MULTI_IFACE
+        , 0xFF
 #endif
 		);
         can_tx_count++;
@@ -2302,8 +2316,8 @@ void Libcanard_module::onTransferReception(CanardRxTransfer * const transfer)
                 CanardResponse,
                 &transport_status_buffer,
                 len
-#if CANARD_MULTI_IFACE
-        , 0
+#ifdef CANARD_MULTI_IFACE
+        , 0xFF
 #endif
 		);
         can_tx_count++;
@@ -2370,8 +2384,8 @@ void Libcanard_module::onTransferReception(CanardRxTransfer * const transfer)
                 CanardResponse,
                 &error,
                 1
-#if CANARD_MULTI_IFACE
-        , 0
+#ifdef CANARD_MULTI_IFACE
+        , 0xFF
 #endif
 		);
         can_tx_count++;
@@ -2484,6 +2498,9 @@ void Libcanard_module::onTransferReception(CanardRxTransfer * const transfer)
                   CanardResponse,
                   get_set_buffer,
                   get_set_buffer_length
+#ifdef CANARD_MULTI_IFACE
+        , 0xFF
+#endif
 		);
           can_tx_count++;
 
@@ -2528,8 +2545,8 @@ void Libcanard_module::onTransferReception(CanardRxTransfer * const transfer)
                     CanardResponse,
                     op_code_buffer,
                     length
-#if CANARD_MULTI_IFACE
-        , 0
+#ifdef CANARD_MULTI_IFACE
+        , 0xFF
 #endif
 		);
             can_tx_count++;
