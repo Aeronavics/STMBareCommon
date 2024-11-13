@@ -1621,7 +1621,6 @@ void Libcanard_module::poll()
         }
         CanardCANFrame frame = rx_queue.front();
         rx_queue.pop();
-        HAL_GPIO_TogglePin(STATUS2_GPIO_Port, STATUS2_Pin);
         canardHandleRxFrame(&canard_, &frame, getMonotonicTimestampUSec());
         #endif
         
@@ -1762,7 +1761,18 @@ void Libcanard_module::sendLog(const impl_::LogLevel level, const std::string & 
     can_tx_count++;
 }
 //Handles driver broadcasting and enqueues a frame to send.
-void Libcanard_module::handle_rx_can(const CanardRxTransfer * transfer, uint64_t data_type_signature, uint16_t data_type_id, uint8_t* inout_transfer_id, uint8_t priority, const void* payload, uint16_t payload_len)
+void Libcanard_module::handle_rx_can(
+		const CanardRxTransfer * transfer,
+		uint64_t data_type_signature,
+		uint16_t data_type_id,
+		uint8_t* inout_transfer_id,
+		uint8_t priority,
+		const void* payload,
+		uint16_t payload_len
+#ifdef CANARD_MULTI_IFACE
+		, uint8_t iface_mask
+#endif
+)
 {
     //check to see if the CAN 
     if(!can_enabled)
@@ -1777,7 +1787,7 @@ void Libcanard_module::handle_rx_can(const CanardRxTransfer * transfer, uint64_t
           payload,
           payload_len
 #ifdef CANARD_MULTI_IFACE
-        , 0xFF
+        , iface_mask
 #endif
     );
           //increment the CAN TX counter
@@ -2073,14 +2083,57 @@ void Libcanard_module::handle_rx_can(const CanardRxTransfer * transfer, uint64_t
 
 
 #if defined(STM32G4XX)
-void Libcanard_module::add_to_rx_queue(CanardCANFrame can_frame)
+void Libcanard_module::add_to_rx_queue(CanardCANFrame can_frame, FDCAN_RxHeaderTypeDef RxHeader)
 {
     rx_queue.push(can_frame);
+#ifdef CANARD_MULTI_IFACE
+    if (
+			(
+					(((can_frame.id >> 7) & 0x1) == 1)
+					&& (((can_frame.id >> 8) & 0x7F) != canardGetLocalNodeID(&canard_))
+			)
+			||
+			(
+					((can_frame.id >> 7) & 0x1) == 0
+					&& (((can_frame.id >> 8) & 0xFFFF) != COM_AERONAVICS_LOADCELLINFO_ID)
+					&& (((can_frame.id >> 8) & 0xFFFF) != COM_AERONAVICS_EXTENDERINFO_ID)
+			)
+	)
+	{
+		FDCAN_TxHeaderTypeDef TxHeader;
+		TxHeader.Identifier = RxHeader.Identifier;
+		TxHeader.IdType = RxHeader.IdType;
+		TxHeader.TxFrameType = RxHeader.RxFrameType;
+		TxHeader.DataLength = RxHeader.DataLength;
+		TxHeader.ErrorStateIndicator = RxHeader.ErrorStateIndicator;
+		TxHeader.BitRateSwitch = RxHeader.BitRateSwitch;
+		TxHeader.FDFormat = RxHeader.FDFormat;
+		TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+		TxHeader.MessageMarker = 0;
+
+		if (can_frame.iface_id == 0)
+		{
+			if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &TxHeader, can_frame.data) != HAL_OK)
+			{
+				Error_Handler();
+			}
+		}
+		else if (can_frame.iface_id == 1)
+		{
+			if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, can_frame.data) != HAL_OK)
+			{
+				Error_Handler();
+			}
+		}
+	}
+#endif
 }
+
 
 void Libcanard_module::onTransferReception(CanardRxTransfer * const transfer)
 {
     using namespace impl_;
+
 
 
     /*
@@ -2546,7 +2599,7 @@ void Libcanard_module::onTransferReception(CanardRxTransfer * const transfer)
                     op_code_buffer,
                     length
 #ifdef CANARD_MULTI_IFACE
-        , 0xFF
+					, 0xFF
 #endif
 		);
             can_tx_count++;
@@ -2564,7 +2617,19 @@ void Libcanard_module::onTransferReception(CanardRxTransfer * const transfer)
       data signature is not used when internally transferring
     */
 
-    driverhost_broadcast_can(transfer, 0, transfer->data_type_id, &transfer->transfer_id, transfer->priority, transfer->payload_head, transfer->payload_len, this);
+    driverhost_broadcast_can(
+    		transfer,
+			0,
+			transfer->data_type_id,
+			&transfer->transfer_id,
+			transfer->priority,
+			transfer->payload_head,
+			transfer->payload_len,
+#ifdef CANARD_MULTI_IFACE
+			0xFF,
+#endif
+			this
+			);
     /**
       Let us clear the transfer for Justin Case. This might already be released, in this case we have re-released it. Noice.
     */
@@ -2622,6 +2687,13 @@ bool Libcanard_module::shouldAcceptTransfer(std::uint64_t* out_data_type_signatu
         {
             *out_data_type_signature = RestartNode::DataTypeSignature;
             return true;
+        }
+
+        if ((transfer_type == CanardTransferTypeBroadcast) &&
+        		(data_type_id == UAVCAN_PROTOCOL_NODESTATUS_ID))
+        {
+        	*out_data_type_signature = UAVCAN_PROTOCOL_NODESTATUS_SIGNATURE;
+			return true;
         }
 #ifdef LIBCANARD_MESSAGE_PARAMETERS
         //parameter get/set
@@ -2745,53 +2817,29 @@ bool Libcanard_module::shouldAcceptTransferTrampoline(const CanardInstance* ins,
 
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
-	HAL_GPIO_TogglePin(STATUS3_GPIO_Port, STATUS3_Pin);
     if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
     {
         /* Retrieve Rx messages from RX FIFO0 */
         FDCAN_RxHeaderTypeDef RxHeader;
         CanardCANFrame can_frame;
-        if (hfdcan->Instance == FDCAN1)
-        {
-			if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, can_frame.data) != HAL_OK)
-			{
-				Error_Handler();
-			}
-			can_frame.id = RxHeader.Identifier | CANARD_CAN_FRAME_EFF;
-			can_frame.data_len = RxHeader.DataLength;
-			can_frame.iface_id = 0;
-			Libcanard_module::get_driver().add_to_rx_queue(can_frame);
-    	}
-		if (hfdcan->Instance == FDCAN2)
+		if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, can_frame.data) != HAL_OK)
 		{
-			if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, can_frame.data) != HAL_OK)
-			{
-				Error_Handler();
-			}
-			can_frame.id = RxHeader.Identifier | CANARD_CAN_FRAME_EFF;
-			can_frame.data_len = RxHeader.DataLength;
-			can_frame.iface_id = 0;
-			Libcanard_module::get_driver().add_to_rx_queue(can_frame);
+			Error_Handler();
 		}
-    }
-}
-void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
-{
-    if((RxFifo0ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE) != RESET)
-    {
-        /* Retrieve Rx messages from RX FIFO1 */
-        FDCAN_RxHeaderTypeDef RxHeader;
-        CanardCANFrame can_frame;
-        if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &RxHeader, can_frame.data) != HAL_OK)
-        {
-            Error_Handler();
-        }
+		can_frame.id = RxHeader.Identifier | CANARD_CAN_FRAME_EFF;
+		can_frame.data_len = RxHeader.DataLength;
+#ifdef CANARD_MULTI_IFACE
+		if (hfdcan->Instance == FDCAN1)
+		{
+			can_frame.iface_id = 0;
+		}
+		else
+		{
+			can_frame.iface_id = 1;
+		}
+#endif
 
-        can_frame.id = RxHeader.Identifier;
-        can_frame.data_len = RxHeader.DataLength;
-        can_frame.iface_id = 0;
-
-        Libcanard_module::get_driver().add_to_rx_queue(can_frame);
+		Libcanard_module::get_driver().add_to_rx_queue(can_frame, RxHeader);
     }
 }
 

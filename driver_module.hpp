@@ -152,7 +152,18 @@ public:
      @return nothing
    */
    #ifdef LIBCANARD_ENABLED
-    virtual void handle_rx_can(const CanardRxTransfer * transfer, uint64_t data_type_signature, uint16_t data_type_id, uint8_t* inout_transfer_id, uint8_t priority, const void* payload, uint16_t payload_len)
+    virtual void handle_rx_can(
+    		const CanardRxTransfer * transfer,
+			uint64_t data_type_signature,
+			uint16_t data_type_id,
+			uint8_t* inout_transfer_id,
+			uint8_t priority,
+			const void* payload,
+			uint16_t payload_len
+#ifdef CANARD_MULTI_IFACE
+			, uint8_t iface_mask
+#endif
+    )
     {
       return;
     }
@@ -226,7 +237,19 @@ void driverhost_broadcast_mavlink(const mavlink_message_t& message, Driver_modul
   @return nothing
  */
 #ifdef LIBCANARD_ENABLED
-void driverhost_broadcast_can(const CanardRxTransfer * transfer, uint64_t data_type_signature, uint16_t data_type_id, uint8_t* inout_transfer_id, uint8_t priority, const void* payload, uint16_t payload_len, Driver_module * const except);
+void driverhost_broadcast_can(
+		const CanardRxTransfer * transfer,
+		uint64_t data_type_signature,
+		uint16_t data_type_id,
+		uint8_t* inout_transfer_id,
+		uint8_t priority,
+		const void* payload,
+		uint16_t payload_len,
+#ifdef CANARD_MULTI_IFACE
+		uint8_t iface_mask,
+#endif
+		Driver_module * const except
+);
 #endif
 /**
  *

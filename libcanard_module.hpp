@@ -345,7 +345,18 @@ public:
     void sync_update_100Hz();
     void sync_update_10Hz();
     void sync_update_1Hz();
-    void handle_rx_can(const CanardRxTransfer * transfer, uint64_t data_type_signature, uint16_t data_type_id, uint8_t* inout_transfer_id, uint8_t priority, const void* payload, uint16_t payload_len);
+    void handle_rx_can(
+    		const CanardRxTransfer * transfer,
+			uint64_t data_type_signature,
+			uint16_t data_type_id,
+			uint8_t* inout_transfer_id,
+			uint8_t priority,
+			const void* payload,
+			uint16_t payload_len
+#ifdef CANARD_MULTI_IFACE
+		, uint8_t iface_mask
+#endif
+    );
     static Libcanard_module& get_driver(void);
     uint32_t usec_since_boot;
     volatile bool kill_loading;
@@ -360,7 +371,7 @@ public:
     #endif
 
     #ifdef STM32G4XX
-      void add_to_rx_queue(CanardCANFrame can_frame);
+      void add_to_rx_queue(CanardCANFrame can_frame, FDCAN_RxHeaderTypeDef RxHeader);
     #endif
 
     void sendLog(const impl_::LogLevel level, const std::string& txt);
