@@ -189,7 +189,13 @@ void Libcanard_module::sync_update_100Hz()
                            */
                           if (offset % 2048 == 0)
                           {
+#if defined(STM32G4XX)
+                          	// Erase page by given page number
+                              FLASH_If_Erase_Page(offset / 2048);
+#elif defined(STM32F1XX)
+                              // Erase page by given page address
                               FLASH_If_Erase_Page(FLASH_START_ADDRESS + (offset));
+#endif
                           }
                           FLASH_If_Write(FLASH_START_ADDRESS + offset, reinterpret_cast<uint32_t*> (tmp_array), read_result_ / 4);
                           offset += read_result_;
@@ -220,7 +226,11 @@ void Libcanard_module::sync_update_100Hz()
                           CANARD_TRANSFER_PRIORITY_HIGH,
                           CanardRequest,
                           buffer,
-                          firmware_file_path_.size() + 5);
+                          firmware_file_path_.size() + 5
+#ifdef CANARD_MULTI_IFACE
+                          ,0xFF
+#endif
+                  );
                   wait_deadline = getMonotonicTimestampUSec() + ServiceRequestTimeoutMillisecond * 800;
                   request_next_chunk = false;
                   response_recieved = false;
@@ -2095,8 +2105,12 @@ void Libcanard_module::add_to_rx_queue(CanardCANFrame can_frame, FDCAN_RxHeaderT
 			||
 			(
 					((can_frame.id >> 7) & 0x1) == 0
+#ifdef LIBCANARD_MESSAGE_LOADCELLINFO
 					&& (((can_frame.id >> 8) & 0xFFFF) != COM_AERONAVICS_LOADCELLINFO_ID)
+#endif
+#ifdef LIBCANARD_MESSAGE_EXTENDERINFO
 					&& (((can_frame.id >> 8) & 0xFFFF) != COM_AERONAVICS_EXTENDERINFO_ID)
+#endif
 			)
 	)
 	{

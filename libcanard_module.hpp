@@ -172,10 +172,10 @@ extern uint8_t bootloader_info_location;
 /*
   Location of the CAN Parameters in flash memory.
 */
-#define CAN_EEPROM_LOCATION ((uint32_t)0x08032000) //ADDR_FLASH_PAGE_100
-#define CAN_EEPROM_PAGE_NUM 100
+#define CAN_EEPROM_LOCATION ((uint32_t)0x0800B000) //ADDR_FLASH_PAGE_22
+#define CAN_EEPROM_PAGE_NUM 22
 #define CAN_NODE_LOCATION_OFFSET 0x10 //This is so we do not have to perform auto can node allocation each time.
-#define FLASH_START_ADDRESS ((uint32_t)0x08000000) //ADDR_FLASH_PAGE_25
+#define FLASH_START_ADDRESS ((uint32_t)0x0800C800) //ADDR_FLASH_PAGE_25
 #define RAM_DO_BOOTLOADER_BYTE 0x22
 #define CAN_EEPROM_FLAG 0xBB
 

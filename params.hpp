@@ -84,9 +84,8 @@
 #define ADDR_FLASH_PAGE_25    ((uint32_t)0x0800C800) /* Base @ of Page 17, 2 Kbytes */
 #define ADDR_FLASH_PAGE_26    ((uint32_t)0x0800D000) /* Base @ of Page 16, 2 Kbytes */
 #define ADDR_FLASH_PAGE_27    ((uint32_t)0x0800D800) /* Base @ of Page 17, 2 Kbytes */
-#define ADDR_FLASH_PAGE_104   ((uint32_t)0x08034000) /* Base @ of Page 17, 2 Kbytes */
 
-#define FLASH_PAGE_1 ADDR_FLASH_PAGE_104
+#define FLASH_PAGE_1 ADDR_FLASH_PAGE_20
 #define FLASH_PAGE_2 ADDR_FLASH_PAGE_21
 #define FLASH_PAGE_3 ADDR_FLASH_PAGE_22
 #define FLASH_PAGE_4 ADDR_FLASH_PAGE_23

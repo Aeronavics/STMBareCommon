@@ -28,6 +28,8 @@
 
 // INCLUDE REQUIRED HEADER FILES FOR IMPLEMENTATION.
 
+#ifndef NO_MAVLINK_ENABLED
+
 #define EXTERN // Fairly common C/CPP magic to allow global defintions in header files.
 #include "mavlink_params.hpp" // A file containing the actual parameter definitions must be present in each component using the library.
 #undef EXTERN
@@ -1198,4 +1200,5 @@ void safe_strcpy(char* dst, const char* src)
 
 // IMPLEMENT INTERRUPT SERVICE ROUTINES.
 
+#endif
 // ALL DONE.

@@ -24,6 +24,8 @@
 
 #include "uart_module.hpp"
 
+#ifndef NO_MAVLINK_ENABLED
+
 // INCLUDE REQUIRED HEADER FILES FOR IMPLEMENTATION.
 
 // DECLARE PRIVATE GLOBAL VARIABLES.
@@ -745,5 +747,5 @@ bool check_SMART_PORT_Packet(const uint8_t * packet) // from: https://github.com
 // IMPLEMENT PRIVATE CLASS FUNCTIONS.
 
 // IMPLEMENT INTERRUPT SERVICE ROUTINES.
-
+#endif
 // ALL DONE.
