@@ -191,7 +191,7 @@ void Libcanard_module::sync_update_100Hz()
                           {
 #if defined(STM32G4XX)
                           	// Erase page by given page number
-                              FLASH_If_Erase_Page(offset / 2048);
+                              FLASH_If_Erase_Page(FLASH_START_PAGE + (offset / 2048));
 #elif defined(STM32F1XX)
                               // Erase page by given page address
                               FLASH_If_Erase_Page(FLASH_START_ADDRESS + (offset));
@@ -414,7 +414,7 @@ void Libcanard_module::sync_update_1Hz()
 						&Libcanard_module::shouldAcceptTransferTrampoline,
 						(void *) this);
 
-                init_can_device();
+
 
                 if (HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig) != HAL_OK)
                 {
@@ -450,6 +450,7 @@ void Libcanard_module::sync_update_1Hz()
 								}
 #endif
 
+                init_can_device();
 
                 // let us finish setting everything up.
                 // let us no longer stay in the init phase
