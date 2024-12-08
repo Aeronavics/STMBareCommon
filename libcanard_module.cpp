@@ -189,12 +189,14 @@ void Libcanard_module::sync_update_100Hz()
                            */
                           if (offset % 2048 == 0)
                           {
-#if defined(STM32G4XX)
+#if defined(STM32G4XX) || defined(STM32L4XX)
                           	// Erase page by given page number
                               FLASH_If_Erase_Page(FLASH_START_PAGE + (offset / 2048));
 #elif defined(STM32F1XX)
                               // Erase page by given page address
                               FLASH_If_Erase_Page(FLASH_START_ADDRESS + (offset));
+#else
+#error No Can Erase function
 #endif
                           }
                           FLASH_If_Write(FLASH_START_ADDRESS + offset, reinterpret_cast<uint32_t*> (tmp_array), read_result_ / 4);
@@ -318,19 +320,13 @@ void Libcanard_module::sync_update_1Hz()
                     }
                     #endif
                     //start the STM32 CAN drivers
-#ifdef STM32F1XX
-#define STM_CAN_DEFINED
+#if defined(STM32F1XX)
                     MX_CAN_Init();
-#endif
-#ifdef STM32G4XX
-#define STM_CAN_DEFINED
+#elif defined(STM32G4XX)
                     MX_FDCAN1_Init();
-#endif
-#ifdef STM32L4XX
-#define STM_CAN_DEFINED
+#elif defined(STM32L4XX)
                     MX_CAN1_Init();
-#endif
-#ifndef STM_CAN_DEFINED
+#else
 #error No Can Initialisation function defined
 #endif
 
@@ -1878,15 +1874,11 @@ void Libcanard_module::handle_rx_can(
       /**
        * Erase the memory
        */
-#ifdef STM32F1XX
-#define ERASE_EEPROM_PAGE_DEFINED
+#if defined(STM32F1XX)
       erase_eeprom_page(CAN_EEPROM_LOCATION);
-#endif
-#if defined(STM32G4XX) || defined(STM32L4XX)
-#define ERASE_EEPROM_PAGE_DEFINED
+#elif defined(STM32G4XX) || defined(STM32L4XX)
       erase_eeprom_page_by_number(CAN_EEPROM_PAGE_NUM);
-#endif
-#ifndef ERASE_EEPROM_PAGE_DEFINED
+#else
 #error No erase_eeprom_page defined for this chip
 #endif
       /**
@@ -2009,7 +2001,7 @@ void Libcanard_module::handle_rx_can(
         HAL_FLASH_Lock();
     }
 
-#ifdef STM32F1XX
+#if defined(STM32F1XX)
     /**
      * Erases a specified page by address
      * @param address
@@ -2035,8 +2027,7 @@ void Libcanard_module::handle_rx_can(
          */
         HAL_FLASH_Lock();
     }
-#endif
-#if defined(STM32G4XX) || defined(STM32L4XX)
+#elif defined(STM32G4XX) || defined(STM32L4XX)
     /**
      * Erases a specified page by page number
      * @param page number
@@ -2062,6 +2053,8 @@ void Libcanard_module::handle_rx_can(
          */
         HAL_FLASH_Lock();
     }
+#else
+#error no erase function provided
 #endif
 
 
